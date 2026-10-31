@@ -3,14 +3,15 @@
 Posts one QuickSong Short to YouTube every 30 minutes (48 a day) from a queue stored in this repo.
 
 ```
-your downloader ──► Claude renders (render.py) ──► queue (GitHub release "queue")
+your downloader ──► Claude renders (render.py) ──► queue (the "queue" branch)
                                                         │  every 30 min
                                                         ▼
                                    GitHub Actions ──► YouTube (QuickSong channel)
 ```
 
-- **Queue** = the release tagged `queue` (Releases tab). Videos live there as assets, so the git
-  history never fills up with video files. Each upload removes its video from the queue.
+- **Queue** = the `queue` branch (switch branch at the top of the repo page). Each video is an
+  `.mp4` + `.json` pair. Each upload deletes its pair, and every new batch rebuilds the branch as a
+  single commit, so posted videos don't pile up in the repo's history.
 - **Log** = `uploaded.csv` — every upload with its YouTube link.
 - **Order** = most-played songs first inside each batch; new batches join the back of the line.
 
@@ -31,10 +32,9 @@ your downloader ──► Claude renders (render.py) ──► queue (GitHub rel
    (save it as `client_secret.json`, never commit it).
 
 ### 3. Get the YouTube login token (on your PC)
-```
-python tools/get_token.py client_secret.json
-```
-Sign in with the QuickSong Gmail and pick the QuickSong channel. It prints three values.
+Put `client_secret.json` next to `tools/get_token.py` (or `QuickSong_Login.py`), open it in
+Python IDLE and press **F5**. Sign in with the QuickSong Gmail and pick the QuickSong channel.
+It prints three values and saves them to `QuickSong_GitHub_Secrets.txt`.
 
 ### 4. GitHub
 1. Create a **private** repo called `quicksong-uploader` and put these files in it.
@@ -62,12 +62,13 @@ Claude does this for you each day. To do it yourself:
 ```
 pip install -r tools/requirements.txt          # once (also needs ffmpeg)
 python tools/render.py path\to\downloads --out out
-python tools/enqueue.py out --repo YOURNAME/quicksong-uploader
+python tools/enqueue.py out
 ```
 `render.py` reads the downloader's `<audio>.metadata.json` files and the `covers/` folder,
 picks the hook, makes it 1.3× nightcore with reverb, and renders a 1080×1920 30-second Short
-coloured from the cover art. A video that YouTube rejects is renamed `FAILED_…` in the queue
-and skipped, so one bad file never blocks the rest.
+coloured from the cover art. A video that YouTube rejects is removed from the queue and logged
+as `FAILED` in `uploaded.csv`, so one bad file never blocks the rest. A video's `.json` can
+include `"privacy": "private"` to override the default for just that upload.
 
 ## Good to know
 - GitHub sometimes starts scheduled runs a few minutes late; uploads stay about 30 min apart.
