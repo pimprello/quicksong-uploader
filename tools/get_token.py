@@ -1,23 +1,39 @@
 #!/usr/bin/env python3
 """
-One-time YouTube login for the QuickSong channel. Run this on YOUR computer:
+One-time YouTube login for the QuickSong channel.
 
-    python tools/get_token.py path\\to\\client_secret.json
+EASY WAY: put client_secret.json in the same folder as this file, open this file in
+Python IDLE and press F5. (Command line also works: python QuickSong_Login.py client_secret.json)
 
 A browser opens — sign in with the QuickSong Gmail and pick the QuickSong channel.
 It then prints the three values to paste into GitHub → Settings → Secrets → Actions:
     YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN
 Standard library only, nothing to install.
 """
+from pathlib import Path
 import http.server, json, secrets, sys, threading, urllib.parse, urllib.request, webbrowser
 
 SCOPE = "https://www.googleapis.com/auth/youtube.upload"
 
 
+def find_client_file():
+    if len(sys.argv) > 1:
+        return Path(sys.argv[1])
+    here = Path(__file__).resolve().parent
+    for folder in (here, here.parent, Path.home() / "Downloads"):
+        found = sorted(folder.glob("client_secret*.json"), key=lambda p: -p.stat().st_mtime)
+        if found:
+            return found[0]
+    return None
+
+
 def main():
-    if len(sys.argv) != 2:
-        sys.exit(__doc__)
-    cfg = json.load(open(sys.argv[1], encoding="utf-8"))
+    path = find_client_file()
+    if not path or not path.exists():
+        print("Couldn't find client_secret.json.\nPut it in the same folder as this file, then press F5 again.")
+        return
+    print(f"Using {path.name}")
+    cfg = json.load(open(path, encoding="utf-8"))
     cfg = cfg.get("installed") or cfg.get("web") or cfg
     cid, csec = cfg["client_id"], cfg["client_secret"]
 
@@ -55,11 +71,18 @@ def main():
     tok = json.load(urllib.request.urlopen("https://oauth2.googleapis.com/token", data))
     if "refresh_token" not in tok:
         sys.exit("No refresh token returned. Remove the app's access at myaccount.google.com/permissions and run again.")
-    print("Add these as GitHub Actions secrets (repo → Settings → Secrets and variables → Actions):\n")
-    print(f"YT_CLIENT_ID      = {cid}")
-    print(f"YT_CLIENT_SECRET  = {csec}")
-    print(f"YT_REFRESH_TOKEN  = {tok['refresh_token']}")
-    print("\nKeep these private — anyone with them can upload to the channel.")
+    text = ("Add these 3 secrets in GitHub: your repo → Settings → Secrets and variables → Actions\n"
+            "→ New repository secret. Name on the left, value on the right.\n\n"
+            f"YT_CLIENT_ID\n{cid}\n\n"
+            f"YT_CLIENT_SECRET\n{csec}\n\n"
+            f"YT_REFRESH_TOKEN\n{tok['refresh_token']}\n\n"
+            "Keep this private — anyone with these can upload to the channel. "
+            "Delete this file once they're in GitHub.\n")
+    out = path.parent / "QuickSong_GitHub_Secrets.txt"
+    out.write_text(text, encoding="utf-8")
+    print("\n✓ Connected!\n")
+    print(text)
+    print(f"Also saved to: {out}")
 
 
 if __name__ == "__main__":
