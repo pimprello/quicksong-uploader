@@ -76,7 +76,8 @@ def main():
     redirect = f"http://127.0.0.1:{srv.server_port}"
     url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode({
         "client_id": cid, "redirect_uri": redirect, "response_type": "code",
-        "scope": SCOPE, "access_type": "offline", "prompt": "consent", "state": state})
+        "scope": SCOPE, "access_type": "offline", "prompt": "select_account consent",
+        "include_granted_scopes": "false", "state": state})
     print("Opening your browser to sign in…\nIf it doesn't open, paste this link:\n" + url + "\n")
     webbrowser.open(url)
     while "code" not in result:
@@ -91,11 +92,12 @@ def main():
     ch_id, ch_name = which_channel(tok["access_token"])
     if ch_id != TARGET_CHANNEL_ID:
         print("\n✗ WRONG CHANNEL — nothing was saved.\n")
-        print(f"You picked:  {ch_name or 'no channel'}  ({ch_id})")
-        print(f"Needed:      {TARGET_CHANNEL_ID}\n")
-        print("Press F5 again. After choosing the Gmail, Google shows a 'Choose an account or brand account'")
-        print("screen — pick the QuickSong channel there. If QuickSong isn't on that list, it belongs to a")
-        print("different Google account: sign in with that account instead.")
+        print(f"You picked:  {ch_name or 'the Gmail itself (it has no channel of its own)'}  ({ch_id or '-'})")
+        print(f"Needed:      QuickSong  ({TARGET_CHANNEL_ID})\n")
+        print("QuickSong is a 'brand account' channel, so Google treats it as its own account.")
+        print("1. In this browser, go to youtube.com → your profile picture → Switch account → QuickSong.")
+        print("2. Press F5 here again. On Google's 'Choose an account' screen, QuickSong should now appear")
+        print("   as its own entry (with its channel picture). Click QuickSong, not the Gmail.")
         return
     print(f"\n✓ Logged in to the right channel: {ch_name} ({ch_id})")
     text = ("Add these 3 secrets in GitHub: your repo → Settings → Secrets and variables → Actions\n"
