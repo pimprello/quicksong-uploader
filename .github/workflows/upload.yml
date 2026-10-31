@@ -1,0 +1,34 @@
+name: QuickSong upload
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"      # every 30 minutes (GitHub may start a run a few minutes late)
+  workflow_dispatch: {}         # "Run workflow" button for a manual upload
+
+permissions:
+  contents: write               # delete queue assets + commit uploaded.csv
+
+concurrency:
+  group: quicksong-upload
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ vars.PAUSED != 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Upload next video in the queue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          PRIVACY: ${{ vars.PRIVACY || 'public' }}
+          CATEGORY_ID: ${{ vars.CATEGORY_ID || '10' }}
+        run: python3 uploader/upload_next.py

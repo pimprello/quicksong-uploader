@@ -1,0 +1,7 @@
+numpy
+librosa
+pedalboard
+pycairo
+mutagen
+Pillow
+soundfile
