@@ -6,6 +6,7 @@ EASY WAY: put client_secret.json in the same folder as this file, open this file
 Python IDLE and press F5. (Command line also works: python QuickSong_Login.py client_secret.json)
 
 A browser opens — sign in with the QuickSong Gmail and pick the QuickSong channel.
+It checks the channel you picked and only saves the login if it's the right one.
 It then prints the three values to paste into GitHub → Settings → Secrets → Actions:
     YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN
 Standard library only, nothing to install.
@@ -13,7 +14,22 @@ Standard library only, nothing to install.
 from pathlib import Path
 import http.server, json, secrets, sys, threading, urllib.parse, urllib.request, webbrowser
 
-SCOPE = "https://www.googleapis.com/auth/youtube.upload"
+# The channel uploads must go to. The login refuses to finish on any other channel.
+TARGET_CHANNEL_ID = "UC1wkRMYNFOyWZMEZkWlrWKQ"
+
+# upload = post videos; readonly = lets the uploader check it's on the right channel first
+SCOPE = ("https://www.googleapis.com/auth/youtube.upload "
+         "https://www.googleapis.com/auth/youtube.readonly")
+
+
+def which_channel(access_token):
+    req = urllib.request.Request(
+        "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",
+        headers={"Authorization": f"Bearer {access_token}"})
+    items = json.load(urllib.request.urlopen(req)).get("items", [])
+    if not items:
+        return None, None
+    return items[0]["id"], items[0]["snippet"]["title"]
 
 
 def find_client_file():
@@ -70,7 +86,18 @@ def main():
                                    "redirect_uri": redirect, "grant_type": "authorization_code"}).encode()
     tok = json.load(urllib.request.urlopen("https://oauth2.googleapis.com/token", data))
     if "refresh_token" not in tok:
-        sys.exit("No refresh token returned. Remove the app's access at myaccount.google.com/permissions and run again.")
+        print("No refresh token returned. Remove the app's access at myaccount.google.com/permissions and press F5 again.")
+        return
+    ch_id, ch_name = which_channel(tok["access_token"])
+    if ch_id != TARGET_CHANNEL_ID:
+        print("\n✗ WRONG CHANNEL — nothing was saved.\n")
+        print(f"You picked:  {ch_name or 'no channel'}  ({ch_id})")
+        print(f"Needed:      {TARGET_CHANNEL_ID}\n")
+        print("Press F5 again. After choosing the Gmail, Google shows a 'Choose an account or brand account'")
+        print("screen — pick the QuickSong channel there. If QuickSong isn't on that list, it belongs to a")
+        print("different Google account: sign in with that account instead.")
+        return
+    print(f"\n✓ Logged in to the right channel: {ch_name} ({ch_id})")
     text = ("Add these 3 secrets in GitHub: your repo → Settings → Secrets and variables → Actions\n"
             "→ New repository secret. Name on the left, value on the right.\n\n"
             f"YT_CLIENT_ID\n{cid}\n\n"
