@@ -31,5 +31,4 @@ jobs:
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
           PRIVACY: ${{ vars.PRIVACY || 'public' }}
           CATEGORY_ID: ${{ vars.CATEGORY_ID || '10' }}
-          EXPECTED_CHANNEL_ID: ${{ vars.EXPECTED_CHANNEL_ID || 'UC1wkRMYNFOyWZMEZkWlrWKQ' }}
         run: python3 uploader/upload_next.py

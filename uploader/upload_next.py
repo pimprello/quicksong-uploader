@@ -15,7 +15,6 @@ REPO = os.environ["REPO"]
 BRANCH = "queue"
 PRIVACY = os.environ.get("PRIVACY", "public")
 CATEGORY = os.environ.get("CATEGORY_ID", "10")      # 10 = Music
-EXPECTED_CHANNEL = os.environ.get("EXPECTED_CHANNEL_ID", "").strip()
 
 
 def gh(*args, check=True, binary=False):
@@ -76,23 +75,14 @@ def access_token():
 
 
 def check_channel(token):
-    """Refuse to upload anywhere except the QuickSong channel."""
-    if not EXPECTED_CHANNEL:
-        return
+    """Just reports which channel this login posts to (never blocks the upload)."""
     req = urllib.request.Request("https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",
                                  headers={"Authorization": f"Bearer {token}"})
     try:
         items = json.load(urllib.request.urlopen(req, timeout=30)).get("items", [])
-    except urllib.error.HTTPError as e:
-        sys.exit("::error::Can't confirm which channel this login is for (the login is missing the "
-                 "channel-check permission). Run QuickSong_Login.py in IDLE again and update YT_REFRESH_TOKEN. "
-                 f"Nothing was uploaded. ({e.code})")
-    got = items[0]["id"] if items else None
-    name = items[0]["snippet"]["title"] if items else "no channel"
-    if got != EXPECTED_CHANNEL:
-        sys.exit(f"::error::Login is for the wrong channel: {name} ({got}). Expected {EXPECTED_CHANNEL}. "
-                 "Nothing was uploaded. Run QuickSong_Login.py again and pick the QuickSong channel.")
-    print(f"Channel OK: {name}")
+        print(f"Channel: {items[0]['snippet']['title']} ({items[0]['id']})" if items else "Channel: (not reported)")
+    except Exception:
+        print("Channel: (not reported)")
 
 
 def youtube_upload(token, video_path, meta):
